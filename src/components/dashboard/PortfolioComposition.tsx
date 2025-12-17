@@ -32,7 +32,7 @@ export function PortfolioComposition({ assets }: PortfolioCompositionProps) {
     });
 
     // Generate heatmap data
-    const heatmapData: HeatmapItem[] = assets.map((asset, index) => {
+    const heatmapData: HeatmapItem[] = assets.map((asset) => {
         const currentValue = (asset.currentPrice || asset.purchasePrice) * asset.quantity;
         const investedValue = asset.purchasePrice * asset.quantity;
         const changePercent = investedValue > 0

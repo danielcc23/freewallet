@@ -50,7 +50,7 @@ export function Heatmap({ data, showBreakdown = false, onItemClick }: HeatmapPro
     // Calculate cell sizes based on weight
     const totalWeight = data.reduce((sum, item) => sum + item.weight, 0);
 
-    const renderItem = (item: HeatmapItem, depth: number = 0) => {
+    const renderItem = (item: HeatmapItem) => {
         const widthPercent = (item.weight / totalWeight) * 100;
         const isHovered = hoveredItem === item.id;
         const hasChildren = showBreakdown && item.children && item.children.length > 0;

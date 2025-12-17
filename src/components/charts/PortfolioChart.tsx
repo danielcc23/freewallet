@@ -1,7 +1,5 @@
 import { useState } from 'react';
 import {
-    LineChart,
-    Line,
     XAxis,
     YAxis,
     CartesianGrid,
@@ -9,7 +7,6 @@ import {
     ResponsiveContainer,
     Area,
     AreaChart,
-    Legend,
 } from 'recharts';
 import { Card, CardHeader, CardContent } from '../ui/Card';
 import type { ChartDataPoint, TimePeriod } from '../../types/types';
