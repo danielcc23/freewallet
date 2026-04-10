@@ -1,10 +1,21 @@
-import type { Asset, Portfolio, PortfolioHistoryPoint } from '../types/types';
+import type { Asset, Portfolio, PortfolioGoal, PortfolioHistoryPoint, PortfolioTransaction, WatchlistItem } from '../types/types';
 
 const STORAGE_KEYS = {
     ASSETS: 'freewallet_assets',
     HISTORY: 'freewallet_history',
+    TRANSACTIONS: 'freewallet_transactions',
+    GOALS: 'freewallet_goals',
+    WATCHLIST: 'freewallet_watchlist',
     SETTINGS: 'freewallet_settings',
 } as const;
+
+export interface AppSettings {
+    apiEnabled: boolean;
+}
+
+const DEFAULT_SETTINGS: AppSettings = {
+    apiEnabled: false,
+};
 
 // ===== ASSETS CRUD =====
 export function getAssets(): Asset[] {
@@ -60,6 +71,166 @@ export function getHistory(): PortfolioHistoryPoint[] {
         console.error('Error reading history from localStorage');
         return [];
     }
+}
+
+// ===== SETTINGS =====
+export function getSettings(): AppSettings {
+    try {
+        const data = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+        if (!data) {
+            return DEFAULT_SETTINGS;
+        }
+
+        const parsed = JSON.parse(data) as Partial<AppSettings>;
+        return {
+            ...DEFAULT_SETTINGS,
+            ...parsed,
+        };
+    } catch {
+        console.error('Error reading settings from localStorage');
+        return DEFAULT_SETTINGS;
+    }
+}
+
+function buildBootstrapTransactions(assets: Asset[]): PortfolioTransaction[] {
+    return assets
+        .map((asset) => ({
+            id: `bootstrap-${asset.id}`,
+            assetId: asset.id,
+            assetSymbol: asset.symbol,
+            assetName: asset.name,
+            assetType: asset.type,
+            type: 'buy' as const,
+            date: asset.purchaseDate,
+            quantity: asset.quantity,
+            price: asset.purchasePrice,
+            total: asset.purchasePrice * asset.quantity,
+            notes: 'Importado desde la posición existente',
+            createdAt: asset.purchaseDate,
+        }))
+        .sort((a, b) => (a.date < b.date ? 1 : -1));
+}
+
+// ===== TRANSACTIONS =====
+export function getTransactions(): PortfolioTransaction[] {
+    try {
+        const data = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
+        if (data) {
+            return JSON.parse(data) as PortfolioTransaction[];
+        }
+
+        const assets = getAssets();
+        if (assets.length === 0) {
+            return [];
+        }
+
+        const bootstrapTransactions = buildBootstrapTransactions(assets);
+        saveTransactions(bootstrapTransactions);
+        return bootstrapTransactions;
+    } catch {
+        console.error('Error reading transactions from localStorage');
+        return [];
+    }
+}
+
+export function saveTransactions(transactions: PortfolioTransaction[]): void {
+    try {
+        localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
+    } catch (error) {
+        console.error('Error saving transactions to localStorage:', error);
+    }
+}
+
+export function addTransaction(transaction: PortfolioTransaction): void {
+    const transactions = getTransactions();
+    transactions.unshift(transaction);
+    saveTransactions(transactions);
+}
+
+export function deleteTransactionsByAssetId(assetId: string): void {
+    const transactions = getTransactions();
+    saveTransactions(transactions.filter((transaction) => transaction.assetId !== assetId));
+}
+
+// ===== GOALS =====
+export function getGoals(): PortfolioGoal[] {
+    try {
+        const data = localStorage.getItem(STORAGE_KEYS.GOALS);
+        return data ? JSON.parse(data) as PortfolioGoal[] : [];
+    } catch {
+        console.error('Error reading goals from localStorage');
+        return [];
+    }
+}
+
+export function saveGoals(goals: PortfolioGoal[]): void {
+    try {
+        localStorage.setItem(STORAGE_KEYS.GOALS, JSON.stringify(goals));
+    } catch (error) {
+        console.error('Error saving goals to localStorage:', error);
+    }
+}
+
+export function addGoal(goal: PortfolioGoal): void {
+    const goals = getGoals();
+    goals.unshift(goal);
+    saveGoals(goals);
+}
+
+export function deleteGoal(goalId: string): void {
+    const goals = getGoals();
+    saveGoals(goals.filter((goal) => goal.id !== goalId));
+}
+
+// ===== WATCHLIST =====
+export function getWatchlist(): WatchlistItem[] {
+    try {
+        const data = localStorage.getItem(STORAGE_KEYS.WATCHLIST);
+        return data ? JSON.parse(data) as WatchlistItem[] : [];
+    } catch {
+        console.error('Error reading watchlist from localStorage');
+        return [];
+    }
+}
+
+export function saveWatchlist(items: WatchlistItem[]): void {
+    try {
+        localStorage.setItem(STORAGE_KEYS.WATCHLIST, JSON.stringify(items));
+    } catch (error) {
+        console.error('Error saving watchlist to localStorage:', error);
+    }
+}
+
+export function addWatchlistItem(item: WatchlistItem): void {
+    const items = getWatchlist();
+    items.unshift(item);
+    saveWatchlist(items);
+}
+
+export function deleteWatchlistItem(itemId: string): void {
+    const items = getWatchlist();
+    saveWatchlist(items.filter((item) => item.id !== itemId));
+}
+
+export function saveSettings(settings: AppSettings): void {
+    try {
+        localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+    } catch (error) {
+        console.error('Error saving settings to localStorage:', error);
+    }
+}
+
+export function updateSettings(updates: Partial<AppSettings>): AppSettings {
+    const nextSettings = {
+        ...getSettings(),
+        ...updates,
+    };
+    saveSettings(nextSettings);
+    return nextSettings;
+}
+
+export function isApiEnabled(): boolean {
+    return getSettings().apiEnabled;
 }
 
 export function saveHistory(history: PortfolioHistoryPoint[]): void {
@@ -127,5 +298,8 @@ export function generateId(): string {
 export function clearAllData(): void {
     localStorage.removeItem(STORAGE_KEYS.ASSETS);
     localStorage.removeItem(STORAGE_KEYS.HISTORY);
+    localStorage.removeItem(STORAGE_KEYS.TRANSACTIONS);
+    localStorage.removeItem(STORAGE_KEYS.GOALS);
+    localStorage.removeItem(STORAGE_KEYS.WATCHLIST);
     localStorage.removeItem(STORAGE_KEYS.SETTINGS);
 }
